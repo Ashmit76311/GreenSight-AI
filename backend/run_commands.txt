@@ -1,0 +1,80 @@
+GREEN-SCANNER RUN COMMANDS
+
+====================================
+BACKEND SETUP
+====================================
+
+Open Terminal 1
+
+cd C:\Users\Haasini\OneDrive\Desktop\green-red-earth
+
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+Backend URL:
+http://localhost:8000
+
+Health Check:
+http://localhost:8000/health
+
+====================================
+FRONTEND SETUP
+====================================
+
+Open Terminal 2
+
+cd C:\Users\Haasini\OneDrive\Desktop\green-red-earth
+
+npm install
+
+npm run dev
+
+Frontend URL:
+http://localhost:3000
+
+====================================
+IF BACKEND IS NOT RUNNING
+====================================
+
+Error:
+
+Could not reach the Python backend at http://localhost:8000
+
+Solution:
+
+1. Open a new terminal.
+2. Navigate to the project folder.
+3. Run:
+
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+4. Verify backend is running by opening:
+
+http://localhost:8000/health
+
+5. Refresh the frontend and upload the image again.
+
+====================================
+GITHUB COMMANDS
+====================================
+
+git add .
+
+git commit -m "Update project"
+
+git push origin main
+
+====================================
+REQUIREMENTS
+====================================
+
+Python 3.10+
+Node.js 18+
+FastAPI
+PyTorch
+React + TypeScript + Vite
+
+====================================
+MODEL FILE LOCATION
+====================================
+
+backend/models/unet_crop_weed_soil.pth
