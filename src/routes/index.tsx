@@ -6,15 +6,17 @@ import {
   Image as ImageIcon, BarChart3, Grid3x3, CheckCircle2, Cpu,
   Layers, Brain, Rocket, Cloud, Smartphone, MapPin,
   Code2, Eye, Calculator, Database, LineChart, Monitor,
-  FlaskConical,
+  FlaskConical, Moon, Sun, User,
 } from "lucide-react";
+import { getUser } from "@/lib/auth";
 import finding1Input from "@/assets/findings/p1_1.jpg";
 import finding1Output from "@/assets/findings/p1_2.jpg";
 import finding2Input from "@/assets/findings/p2_1.jpg";
 import finding2Output from "@/assets/findings/p2_2.jpg";
 import finding3Input from "@/assets/findings/p3_1.jpg";
 import finding3Output from "@/assets/findings/p3_2.jpg";
-import segmentationField from "@/assets/segmentation-field.jpg";
+import aerialInput from "@/assets/aerial-input.png";
+import segmentedOutput from "@/assets/segmented-output.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -56,6 +58,27 @@ function Nav() {
     { id: "future", label: "Future Enhancements" },
   ];
   const [active, setActive] = useState<string>("top");
+  const [dark, setDark] = useState<boolean>(false);
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("greenscan-dark");
+    const isDark = saved === "true";
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("greenscan-dark", String(next));
+    document.documentElement.classList.toggle("dark", next);
+  };
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash) {
       history.replaceState(null, "", window.location.pathname);
@@ -105,9 +128,25 @@ function Nav() {
             );
           })}
         </nav>
-        <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-full gradient-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft hover:opacity-95 transition">
-          Launch <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            id="dark-mode-toggle"
+            onClick={toggleDark}
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            className="grid place-items-center h-9 w-9 rounded-full border border-border bg-card text-foreground shadow-soft hover:bg-secondary transition-all"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          {user ? (
+            <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-full bg-secondary border border-border px-3 py-1.5 text-sm font-semibold text-primary hover:bg-card transition">
+              <User className="h-4 w-4" /> {user.name}
+            </Link>
+          ) : (
+            <Link to="/login" className="inline-flex items-center gap-2 rounded-full gradient-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft hover:opacity-95 transition">
+              Launch <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -178,7 +217,7 @@ function DashboardMockup() {
       {/* Realistic field photo — 3-class segmentation */}
       <div className="relative rounded-2xl overflow-hidden border border-border aspect-[4/3] bg-secondary">
         <img
-          src={segmentationField}
+          src={aerialInput}
           alt="Aerial crop field showing crop, weed, and soil regions"
           loading="lazy"
           width={1024}
@@ -343,17 +382,6 @@ function SegmentationShowcase() {
   );
 }
 
-// Shared field layout — same crop rows + weed clumps in both panels so the
-// "before vs after" comparison is obvious.
-const FIELD_ROWS = [0.12, 0.28, 0.44, 0.60, 0.76, 0.92];
-const WEED_CLUMPS = [
-  { cx: 22, cy: 18, r: 5 },
-  { cx: 68, cy: 30, r: 4 },
-  { cx: 40, cy: 48, r: 6 },
-  { cx: 82, cy: 62, r: 4.5 },
-  { cx: 16, cy: 72, r: 5 },
-  { cx: 55, cy: 86, r: 4 },
-];
 
 function SegPanel({ before }: { before?: boolean }) {
   const label = before ? "Original aerial image" : "Segmented output";
@@ -369,86 +397,19 @@ function SegPanel({ before }: { before?: boolean }) {
           {before ? "Input · Aerial photo" : "Output · AI segmentation"}
         </div>
 
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full transition-transform duration-500 group-hover:scale-105"
-        >
-          {/* Soil background */}
-          <rect
-            width="100"
-            height="100"
-            fill={before ? "#8d6e63" : "#8d6e63"}
+        {before ? (
+          <img
+            src={aerialInput}
+            alt="Original aerial field photo"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-
-          {/* Crop rows */}
-          {FIELD_ROWS.map((y, i) => (
-            <rect
-              key={i}
-              x="2"
-              y={y * 100 - 4}
-              width="96"
-              height="6"
-              fill={before ? "#3f6b32" : "#2e7d32"}
-              rx="1"
-              opacity={before ? 0.92 : 1}
-            />
-          ))}
-
-          {/* Subtle row texture for the input only */}
-          {before &&
-            FIELD_ROWS.map((y, i) =>
-              Array.from({ length: 24 }).map((_, j) => (
-                <circle
-                  key={`${i}-${j}`}
-                  cx={3 + j * 4}
-                  cy={y * 100 - 1}
-                  r={0.9}
-                  fill="#4a8540"
-                  opacity={0.7}
-                />
-              )),
-            )}
-
-          {/* Weed clumps */}
-          {WEED_CLUMPS.map((w, i) =>
-            before ? (
-              // In the raw image weeds look like irregular muddy-green blobs
-              <g key={i} opacity={0.92}>
-                <circle cx={w.cx} cy={w.cy} r={w.r} fill="#6b8a3a" />
-                <circle cx={w.cx + 1.2} cy={w.cy - 0.8} r={w.r * 0.7} fill="#7a9a45" />
-                <circle cx={w.cx - 1} cy={w.cy + 1} r={w.r * 0.6} fill="#5a7a32" />
-              </g>
-            ) : (
-              // In the output weeds are clean red regions with a bounding box
-              <g key={i}>
-                <circle cx={w.cx} cy={w.cy} r={w.r} fill="#e53935" />
-                <rect
-                  x={w.cx - w.r - 1.5}
-                  y={w.cy - w.r - 1.5}
-                  width={(w.r + 1.5) * 2}
-                  height={(w.r + 1.5) * 2}
-                  fill="none"
-                  stroke="#ffffff"
-                  strokeWidth="0.5"
-                  strokeDasharray="1.2 0.8"
-                />
-              </g>
-            ),
-          )}
-
-          {/* Grid overlay on output to suggest the 8x8 spray decision grid */}
-          {!before && (
-            <g stroke="#ffffff" strokeWidth="0.15" opacity="0.35">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <line key={`v${i}`} x1={(i + 1) * 12.5} y1="0" x2={(i + 1) * 12.5} y2="100" />
-              ))}
-              {Array.from({ length: 7 }).map((_, i) => (
-                <line key={`h${i}`} x1="0" y1={(i + 1) * 12.5} x2="100" y2={(i + 1) * 12.5} />
-              ))}
-            </g>
-          )}
-        </svg>
+        ) : (
+          <img
+            src={segmentedOutput}
+            alt="AI segmented output"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )}
 
         {!before && (
           <div className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-[var(--leaf)] text-white px-3 py-1 text-xs font-semibold shadow-soft">

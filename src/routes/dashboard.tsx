@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Leaf, Upload, Image as ImageIcon, Droplets, Sprout, BarChart3,
-  TrendingDown, Grid3x3, ArrowLeft, Loader2, Sparkles,
+  TrendingDown, Grid3x3, ArrowLeft, Loader2, Sparkles, LogOut, Clock, Trash2, FileDown,
 } from "lucide-react";
+import { getUser, logout } from "@/lib/auth";
+import { getHistory, addEntry, clearHistory, type HistoryEntry } from "@/lib/history";
+import { generateReport } from "@/lib/reportGenerator";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -85,13 +88,67 @@ async function processImage(file: File): Promise<Result> {
 }
 
 function DashboardPage() {
+  const navigate = useNavigate();
+
+  // Helper functions for AI Insights
+  function getWeedInsight(pct: number) {
+    if (pct < 5) return "Very Low Weed Presence";
+    if (pct < 15) return "Low Weed Presence";
+    if (pct < 30) return "Moderate Weed Presence";
+    return "High Weed Infestation";
+  }
+
+  function getCropInsight(pct: number) {
+    if (pct > 70) return "Excellent Crop Coverage";
+    if (pct > 40) return "Moderate Crop Coverage";
+    return "Poor Crop Coverage";
+  }
+
+  function getSoilInsight(pct: number) {
+    if (pct > 50) return "High Soil Exposure";
+    if (pct > 20) return "Moderate Soil Exposure";
+    return "Low Soil Exposure";
+  }
+
+  function getDoseInsight(dose: number) {
+    if (dose > 30) return "High Application Needed";
+    if (dose > 15) return "Moderate Application Needed";
+    return "Low Application Needed";
+  }
+
+  function getHerbicideInsight(saved: number) {
+    if (saved > 20) return "High Savings Potential";
+    if (saved > 10) return "Moderate Savings Potential";
+    return "Standard Application";
+  }
+
   const [file, setFile] = useState<File | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  
+  // Calculator state
+  const [fieldArea, setFieldArea] = useState<number>(2);
+  const [costPerLitre, setCostPerLitre] = useState<number>(800);
+  const [traditionalUsage, setTraditionalUsage] = useState<number>(5);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const runIdRef = useRef(0);
+
+  // auth guard — runs client-side only
+  useEffect(() => {
+    const currentUser = getUser();
+    if (!currentUser) {
+      navigate({ to: "/login" });
+      return;
+    }
+    setUser(currentUser);
+    setHistory(getHistory(currentUser.email));
+  }, []);
 
   const runProcess = useCallback(async (f: File) => {
     const id = ++runIdRef.current;
@@ -99,7 +156,23 @@ function DashboardPage() {
     setError(null);
     try {
       const r = await processImage(f);
-      if (id === runIdRef.current) setResult(r);
+      if (id !== runIdRef.current) return;
+      setResult(r);
+      // save to history
+      if (user) {
+        const entry: HistoryEntry = {
+          id: `${Date.now()}`,
+          timestamp: Date.now(),
+          cropPct: r.cropPct,
+          weedPct: r.weedPct,
+          soilPct: r.soilPct,
+          dose: r.dose,
+          saved: r.saved,
+          onCount: r.onCount,
+        };
+        addEntry(user.email, entry);
+        setHistory(getHistory(user.email));
+      }
     } catch (e: any) {
       if (id === runIdRef.current) setError(e?.message ?? "Failed to process image.");
     } finally {
@@ -107,17 +180,44 @@ function DashboardPage() {
     }
   }, []);
 
+  const uploadTimestampsRef = useRef<number[]>([]);
+
   const onFile = useCallback((f: File) => {
     setError(null);
-    if (!/\.(jpe?g)$/i.test(f.name) && f.type !== "image/jpeg") {
-      setError("Please upload a JPG/JPEG image.");
+    
+    // Rate Limiting Logic: Max 10 per minute
+    const now = Date.now();
+    uploadTimestampsRef.current = uploadTimestampsRef.current.filter(time => now - time < 60000);
+    
+    if (uploadTimestampsRef.current.length >= 10) {
+      setError("Rate limit exceeded. Please wait 60 seconds before uploading another image.");
       return;
     }
+    
+    if (!/\.(jpe?g|png)$/i.test(f.name) && !f.type.startsWith("image/")) {
+      setError("Please upload a JPG or PNG image.");
+      return;
+    }
+    
+    uploadTimestampsRef.current.push(now);
     setFile(f);
     setOriginalUrl(URL.createObjectURL(f));
     setResult(null);
     runProcess(f);
   }, [runProcess]);
+
+  function handleLogout() {
+    logout();
+    navigate({ to: "/" });
+  }
+
+  function handleClearHistory() {
+    if (!user) return;
+    clearHistory(user.email);
+    setHistory([]);
+  }
+
+  if (!user) return null; // redirecting
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,9 +229,20 @@ function DashboardPage() {
             </span>
             Green-Scanner
           </Link>
-          <Link to="/" className="inline-flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary transition">
-            <ArrowLeft className="h-4 w-4" /> Back to site
-          </Link>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:block text-sm font-semibold text-muted-foreground">
+              Hi, {user.name}
+            </span>
+            <Link to="/" className="inline-flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary transition">
+              <ArrowLeft className="h-4 w-4" /> Back to site
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary transition"
+            >
+              <LogOut className="h-4 w-4" /> Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -161,12 +272,12 @@ function DashboardPage() {
           <div className="mx-auto h-14 w-14 rounded-2xl gradient-primary text-primary-foreground grid place-items-center mb-4 shadow-soft">
             <Upload className="h-6 w-6" />
           </div>
-          <h2 className="font-display text-xl font-bold">Upload aerial field image (JPG)</h2>
-          <p className="text-sm text-muted-foreground mt-1">Drag & drop a .jpg file here or click below to choose.</p>
+          <h2 className="font-display text-xl font-bold">Upload aerial field image (JPG / PNG)</h2>
+          <p className="text-sm text-muted-foreground mt-1">Drag & drop a .jpg or .png file here or click below to choose.</p>
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,.jpg,.jpeg"
+            accept="image/jpeg,image/png,.jpg,.jpeg,.png"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -177,7 +288,7 @@ function DashboardPage() {
             onClick={() => inputRef.current?.click()}
             className="mt-5 inline-flex items-center gap-2 rounded-full gradient-primary text-primary-foreground px-6 py-3 font-semibold shadow-soft hover:opacity-95 transition"
           >
-            <ImageIcon className="h-4 w-4" /> Choose JPG file
+            <ImageIcon className="h-4 w-4" /> Choose image file
           </button>
           {file && <p className="mt-3 text-xs text-muted-foreground">Selected: {file.name}</p>}
           {error && <p className="mt-3 text-sm text-[var(--weed)] font-semibold">{error}</p>}
@@ -202,11 +313,11 @@ function DashboardPage() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard label="Crop Coverage" value={`${result.cropPct.toFixed(2)}%`} color="var(--leaf)" Icon={Sprout} />
-              <MetricCard label="Weed Density" value={`${result.weedPct.toFixed(2)}%`} color="var(--weed)" Icon={Leaf} />
-              <MetricCard label="Soil Coverage" value={`${result.soilPct.toFixed(2)}%`} color="var(--soil)" Icon={BarChart3} />
-              <MetricCard label="Required Herbicide" value={`${result.dose} L/ac`} color="var(--info)" Icon={Droplets} />
-              <MetricCard label="Chemical Saved" value={`${result.saved} L/ac`} color="var(--warn)" Icon={TrendingDown} />
+              <MetricCard label="Crop Coverage" value={`${result.cropPct.toFixed(2)}%`} color="var(--leaf)" Icon={Sprout} subtext={getCropInsight(result.cropPct)} />
+              <MetricCard label="Weed Density" value={`${result.weedPct.toFixed(2)}%`} color="var(--weed)" Icon={Leaf} subtext={getWeedInsight(result.weedPct)} />
+              <MetricCard label="Soil Coverage" value={`${result.soilPct.toFixed(2)}%`} color="var(--soil)" Icon={BarChart3} subtext={getSoilInsight(result.soilPct)} />
+              <MetricCard label="Required Herbicide" value={`${result.dose} L/ha`} color="var(--info)" Icon={Droplets} subtext={getDoseInsight(result.dose)} />
+              <MetricCard label="Chemical Saved" value={`${result.saved} L/ha`} color="var(--warn)" Icon={TrendingDown} subtext={getHerbicideInsight(result.saved)} />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
@@ -240,7 +351,119 @@ function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Cost Savings Calculator */}
+            <div className="rounded-3xl bg-card border border-border p-6 md:p-8 shadow-card">
+              <h3 className="font-display font-bold text-xl mb-6">Herbicide Cost Savings Calculator</h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Field Area (Hectares)</label>
+                    <input 
+                      type="number" 
+                      className="w-full bg-secondary border border-border rounded-lg p-2.5 mt-1 focus:outline-none focus:ring-2 focus:ring-primary/50 transition" 
+                      value={fieldArea} 
+                      onChange={e => setFieldArea(Number(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Cost per Litre of Herbicide (₹)</label>
+                    <input 
+                      type="number" 
+                      className="w-full bg-secondary border border-border rounded-lg p-2.5 mt-1 focus:outline-none focus:ring-2 focus:ring-primary/50 transition" 
+                      value={costPerLitre} 
+                      onChange={e => setCostPerLitre(Number(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Traditional Herbicide Usage (L/Hectare)</label>
+                    <input 
+                      type="number" 
+                      className="w-full bg-secondary border border-border rounded-lg p-2.5 mt-1 focus:outline-none focus:ring-2 focus:ring-primary/50 transition" 
+                      value={traditionalUsage} 
+                      onChange={e => setTraditionalUsage(Number(e.target.value) || 0)} 
+                    />
+                  </div>
+                </div>
+                
+                <div className="bg-secondary rounded-2xl p-6 border border-border flex flex-col justify-center">
+                  <div className="text-sm text-muted-foreground mb-1">Traditional Method: <strong className="text-foreground">{(traditionalUsage * fieldArea).toFixed(1)} L</strong> total</div>
+                  <div className="text-sm text-muted-foreground mb-4">GreenScanner Recommendation: <strong className="text-foreground">{((result.onCount / 64) * traditionalUsage * fieldArea).toFixed(1)} L</strong> total</div>
+                  
+                  <div className="border-t border-border pt-5 mt-2">
+                    <div className="text-sm font-medium text-[var(--leaf)]">Chemical Saved</div>
+                    <div className="text-4xl font-display font-bold text-[var(--leaf)]">{((1 - (result.onCount / 64)) * traditionalUsage * fieldArea).toFixed(1)} L</div>
+                  </div>
+                  <div className="mt-5">
+                    <div className="text-sm font-medium text-[var(--leaf)]">Estimated Cost Savings</div>
+                    <div className="text-4xl font-display font-bold text-[var(--leaf)]">₹{(((1 - (result.onCount / 64)) * traditionalUsage * fieldArea) * costPerLitre).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Download button */}
+            <div className="flex justify-center">
+              <button
+                onClick={async () => {
+                  if (!result || !originalUrl) return;
+                  setPdfLoading(true);
+                  try {
+                    await generateReport(result, originalUrl);
+                  } finally {
+                    setPdfLoading(false);
+                  }
+                }}
+                disabled={pdfLoading}
+                className="inline-flex items-center gap-2 rounded-full gradient-primary text-primary-foreground px-6 py-3 font-semibold shadow-soft hover:opacity-95 transition disabled:opacity-60"
+              >
+                {pdfLoading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</>
+                  : <><FileDown className="h-4 w-4" /> Download PDF Report</>
+                }
+              </button>
+            </div>
           </>
+        )}
+
+        {/* Analysis history */}
+        {history.length > 0 && (
+          <div className="rounded-3xl bg-card border border-border shadow-card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <h2 className="font-display font-bold text-lg">Analysis history</h2>
+              </div>
+              <button
+                onClick={handleClearHistory}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[var(--weed)] transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Clear
+              </button>
+            </div>
+            <div className="space-y-3">
+              {history.map((h) => (
+                <div key={h.id} className="rounded-2xl bg-secondary border border-border p-4 grid sm:grid-cols-5 gap-3 text-sm">
+                  <div className="sm:col-span-2">
+                    <div className="text-xs text-muted-foreground">Date</div>
+                    <div className="font-semibold">{new Date(h.timestamp).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Weed %</div>
+                    <div className="font-semibold text-[var(--weed)]">{h.weedPct.toFixed(1)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Dose</div>
+                    <div className="font-semibold">{h.dose} L/ha</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Spray cells</div>
+                    <div className="font-semibold">{h.onCount} / 64</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </main>
 
@@ -262,7 +485,7 @@ function Panel({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function MetricCard({ label, value, color, Icon }: { label: string; value: string; color: string; Icon: any }) {
+function MetricCard({ label, value, color, Icon, subtext }: { label: string; value: string; color: string; Icon: any; subtext?: string }) {
   return (
     <div className="rounded-2xl bg-card border border-border p-5 shadow-card">
       <span className="h-9 w-9 rounded-lg grid place-items-center" style={{ background: `${color}22`, color }}>
@@ -270,6 +493,7 @@ function MetricCard({ label, value, color, Icon }: { label: string; value: strin
       </span>
       <div className="text-xs text-muted-foreground mt-4">{label}</div>
       <div className="text-2xl font-display font-bold mt-1">{value}</div>
+      {subtext && <div className="text-[11px] font-medium mt-2" style={{ color }}>{subtext}</div>}
     </div>
   );
 }

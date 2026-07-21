@@ -85,10 +85,50 @@
   --shadow-card: 0 10px 30px -12px rgba(38, 50, 56, 0.15);
 }
 
+.dark {
+  --background: #0f1a10;
+  --foreground: #e8f5e9;
+
+  --card: #162517;
+  --card-foreground: #e8f5e9;
+  --popover: #162517;
+  --popover-foreground: #e8f5e9;
+
+  --primary: #66bb6a;
+  --primary-foreground: #0a1a0b;
+  --secondary: #1a2e1b;
+  --secondary-foreground: #a5d6a7;
+  --muted: #1a2e1b;
+  --muted-foreground: #7ea880;
+  --accent: #2e4d30;
+  --accent-foreground: #a5d6a7;
+  --destructive: #ef5350;
+  --destructive-foreground: #0f1a10;
+  --border: #2a3d2b;
+  --input: #2a3d2b;
+  --ring: #66bb6a;
+
+  --leaf: #66bb6a;
+  --sage: #4caf50;
+  --soil: #a1887f;
+  --sand: #1a2e1b;
+  --info: #29b6f6;
+  --warn: #ffa726;
+  --weed: #ef5350;
+
+  --gradient-hero: radial-gradient(1200px 600px at 10% 10%, #2e7d3244 0%, transparent 60%),
+                   radial-gradient(900px 500px at 90% 20%, #1565c033 0%, transparent 60%),
+                   linear-gradient(180deg, #0f1a10 0%, #121f13 100%);
+  --gradient-primary: linear-gradient(135deg, #388e3c 0%, #66bb6a 100%);
+  --shadow-soft: 0 6px 24px -8px rgba(102, 187, 106, 0.2);
+  --shadow-card: 0 10px 30px -12px rgba(0, 0, 0, 0.5);
+}
+
 @layer base {
   * { border-color: var(--color-border); }
   html { scroll-behavior: smooth; overflow-y: scroll; scroll-padding-top: 4.5rem; }
   section[id] { scroll-margin-top: 4.5rem; }
+  *, *::before, *::after { transition: background-color 0.3s ease, border-color 0.3s ease, color 0.15s ease; }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
