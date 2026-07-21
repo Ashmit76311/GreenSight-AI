@@ -3,6 +3,10 @@
 ## 📖 Project Overview
 Green-Scanner is an AI-powered precision agriculture platform designed to help farmers analyze aerial drone imagery of their fields. By utilizing a deep learning U-Net model, it segments crop fields into three distinct classes: Crop, Weed, and Soil. The system computes weed density and generates an actionable 8×8 precision spray plan, empowering farmers to optimize herbicide use, save costs, and reduce environmental impact.
 
+## 🖼 Screenshots
+- ![Dashboard View](./src/assets/Dashboard.png)
+- ![PDF Report Example](./path/to/screenshot2.png)   #<-- change this
+
 ## ✨ Features
 - **AI Semantic Segmentation**: Custom PyTorch U-Net model classifies every pixel as Crop (Green), Weed (Red), or Soil (Brown).
 - **Precision Spray Grid (8x8)**: Generates an actuator grid showing exactly which zones require herbicide (ON) and which don't (OFF).
@@ -11,6 +15,11 @@ Green-Scanner is an AI-powered precision agriculture platform designed to help f
 - **Modern User Interface**: A responsive, beautifully designed frontend featuring glassmorphism aesthetics and a sleek Dark Mode.
 - **User Authentication & History**: Secure local-storage-based user sessions to save and review past field analyses.
 - **Smart Fallback System**: A built-in "mock mode" allowing users to test the UI and PDF generation even when the trained model isn't locally available.
+
+
+## 🌐 Live Demo Links
+- **Live Demo Site**: `[Insert Vercel/Netlify Link Here]`     #<-- change this
+- **Video Walkthrough**: `[Insert YouTube/Loom Link Here]`    #<-- change this
 
 ## 🛠 Technology Stack
 ### Frontend
@@ -59,9 +68,6 @@ Due to GitHub file size limits, the trained model (`.pth`) is ignored in version
 Place your `unet_crop_weed_soil.pth` file inside the `backend/models/` directory. 
 *(If the model is missing, the backend will gracefully fallback to a mock mode for testing purposes).*
 
-## 🖼 Screenshots
-- ![Dashboard View](./src/assets/Dashboard.png)
-- ![PDF Report Example](./path/to/screenshot2.png)
 
 ## 📐 Project Architecture
 ```mermaid
@@ -75,9 +81,6 @@ graph TD;
     Frontend -->|Generates Report| PDF(jsPDF Report);
 ```
 
-## 🌐 Live Demo Links
-- **Live Demo Site**: `[Insert Vercel/Netlify Link Here]`
-- **Video Walkthrough**: `[Insert YouTube/Loom Link Here]`
 
 ## 🚀 Future Enhancements
 - **Multi-Field Management**: Allow farmers to draw boundaries on a live map (e.g., Google Maps API) for fleet tracking.
