@@ -18,8 +18,8 @@ Green-Scanner is an AI-powered precision agriculture platform designed to help f
 
 
 ## 🌐 Live Demo Links
-- **Live Demo Site**: `[Insert Vercel/Netlify Link Here]`     #<-- change this
-- **Video Walkthrough**: `[Insert YouTube/Loom Link Here]`    #<-- change this
+- **Live Demo Site**: `[https://green-sight-eight.vercel.app/dashboard]`     #<-- change this
+- **Video Walkthrough**: `[https://drive.google.com/file/d/1xzcw8ONHyvc9S4ATDKNMOb0023PXVJ_M/view?usp=sharing]`    #<-- change this
 
 ## 🛠 Technology Stack
 ### Frontend
