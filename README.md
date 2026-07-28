@@ -5,7 +5,7 @@ Green-Scanner is an AI-powered precision agriculture platform designed to help f
 
 ## 🖼 Screenshots
 - ![Dashboard View](./src/assets/Dashboard.png)
-- ![PDF Report Example](./path/to/screenshot2.png)   #<-- change this
+- ![PDF Report Example](./src/assets/PDF_Report_Example.jpeg)
 
 ## ✨ Features
 - **AI Semantic Segmentation**: Custom PyTorch U-Net model classifies every pixel as Crop (Green), Weed (Red), or Soil (Brown).
