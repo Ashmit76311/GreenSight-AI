@@ -1,4 +1,4 @@
-# Green-Scanner (GreenSight-AI) 🌿
+# Green-Scanner 🌿
 
 ## 📖 Project Overview
 Green-Scanner is an AI-powered precision agriculture platform designed to help farmers analyze aerial drone imagery of their fields. By utilizing a deep learning U-Net model, it segments crop fields into three distinct classes: Crop, Weed, and Soil. The system computes weed density and generates an actionable 8×8 precision spray plan, empowering farmers to optimize herbicide use, save costs, and reduce environmental impact.
